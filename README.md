@@ -1,7 +1,7 @@
 # CPM-mindspore
 
 ## 项目描述
-微信公众号【YeungNLP】文章：[基于CPM的中文作文生成模型，引经据典、修辞手法，信手拈来](https://mp.weixin.qq.com/s/sFzUNtwrTvi2kAAGQ2M3UA) ，文章内可获取26w+中文作文语料。也可以在https://huggingface.co/datasets/ChenJianHao/CPM_Generate/tree/main里面下载zuowen.rar
+微信公众号【YeungNLP】文章：[基于CPM的中文作文生成模型，引经据典、修辞手法，信手拈来](https://mp.weixin.qq.com/s/sFzUNtwrTvi2kAAGQ2M3UA) ，文章内可获取26w+中文作文语料。也可以在https://huggingface.co/datasets/ChenJianHao/CPM_Generate/tree/main 里面下载zuowen.rar
 
 CPM（Chinese Pretrained Models）模型是北京智源人工智能研究院和清华大学发布的中文大规模预训练模型。官方发布了三种规模的模型，参数量分别为109M、334M、2.6B，用户需申请与通过审核，方可下载。
 本项目采用了334M的CPM模型（若资源允许也可以考虑2.6B的模型），并且简化了模型的训练和使用。
