@@ -1,19 +1,18 @@
 # CPM
 
 ## 项目描述
-微信公众号【YeungNLP】文章：[基于CPM的中文作文生成模型，引经据典、修辞手法，信手拈来](https://mp.weixin.qq.com/s/sFzUNtwrTvi2kAAGQ2M3UA) ，文章内可获取26w+中文作文语料。
+微信公众号【YeungNLP】文章：[基于CPM的中文作文生成模型，引经据典、修辞手法，信手拈来](https://mp.weixin.qq.com/s/sFzUNtwrTvi2kAAGQ2M3UA) ，文章内可获取26w+中文作文语料。（感谢yangjianxin1的提供）
 
 CPM（Chinese Pretrained Models）模型是北京智源人工智能研究院和清华大学发布的中文大规模预训练模型。官方发布了三种规模的模型，参数量分别为109M、334M、2.6B，用户需申请与通过审核，方可下载。
-由于原项目需要考虑大模型的训练和使用，需要安装较为复杂的环境依赖，使用上也较为复杂。
-本项目采用了109M的CPM模型（若资源允许也可以考虑334M的模型），并且简化了模型的训练和使用。
+本项目采用了334M的CPM模型（若资源允许也可以考虑2.6B的模型），并且简化了模型的训练和使用。
 
 本项目是基于CPM模型的中文文本生成项目，可用于作文、小说、新闻、古诗等中文生成任务，并且训练和分享了[中文作文生成模型](#model_share)，取得了不错的[生成效果](#sample)。
-本项目提供了数据预处理、模型训练、文本生成、Http服务等代码模块。
+本项目提供了数据预处理、模型训练、文本生成等代码模块。
 详情可参考[CPM模型论文](https://arxiv.org/abs/2012.00413), [CPM官网](https://cpm.baai.ac.cn/), [项目源码](https://github.com/TsinghuaAI/CPM-Generate) 。
 
 
 ## 运行环境
-python==3.6、transformers==4.6.0、sentencepiece==0.1.94、torch==1.7.0、Flask==1.1.2
+python==3.7.14、mindspore==2.0.0.20230531、sentencepiece==0.1.94、Flask==1.1.2
 
 
 ## 项目结构
@@ -24,25 +23,26 @@ python==3.6、transformers==4.6.0、sentencepiece==0.1.94、torch==1.7.0、Flask
 - log：存放日志文件
 - vocab：
   - chinese_voca.model：sentencepiece模型
-  - vocab.json:分词与id的键值对
-- data_parallel.py：解决pytorch的GPU负载不均衡的问题
+  - vocab.json：分词与id的键值对
+  - tokenizer.json：CPM_Generate提供的文件，用于tokenizer的加载
 - generate.py：生成代码
-- http_service.py：封装成http服务，支持post与get请求
+- train.py：多卡训练代码（采用数据并行），基于mindspore的GPU并行所写，详情可以参考MindSpore官网（https://www.mindspore.cn/tutorials/experts/zh-CN/r2.0/parallel/train_gpu.html）
+- train_single_card.py：单卡训练代码
 - preprocess.py：数据预处理代码
 - utils.py：存放一些工具代码
 
 ## 模型参数与训练细节
-由于GPU资源有限，本项目使用cpm-small.json中的模型参数，若资源充足，可尝试cpm-medium.json中的参数配置。
+由于GPU资源有限，本项目使用cpm-medium.json中的模型参数，若资源充足，可尝试申请更大的参数配置。
 
 本项目的部分模型参数如下：
 - n_ctx: 1024
-- n_embd: 768
-- n_head: 12
-- n_layer: 12
+- n_embd: 1024
+- n_head: 16
+- n_layer: 24
 - n_positions: 1024
 - vocab_size: 30000
 
-对26w篇作文进行预处理之后，得到60w+长度为200的训练数据。显卡为三张GTX 1080Ti，batch_size=50，三张卡显存满载,一轮训练大约需要3个小时。训练40轮之后，loss降到2.1左右，单词预测准确率大约为54%。
+对26w篇作文进行预处理之后，得到60w+长度为200的训练数据。显卡为一张3090，batch_size=12，一张卡显存满载,一轮训练大约需要12个小时。训练40轮之后，loss降到2.0左右，单词预测准确率大约为54%。
 
 ## 使用方法
 ### Quick Start
@@ -93,20 +93,19 @@ python preprocess.py --data_path data/zuowen --save_path data/train.pkl --win_si
 ### 训练模型
 运行如下命令，使用预处理后的数据训练模型。
 ```
-python train.py --epochs 100 --batch_size 16 --device 0,1 --gpu0_bsz 5 --train_path data/train.pkl
+python train_single_card.py
 ```
 超参数说明：
 - device：设置使用哪些GPU
 - no_cuda：设为True时，不使用GPU
-- vocab_path：sentencepiece模型路径，用于tokenize
+- vocab_path：tokenizer.json文件路径，用于tokenize
 - model_config：需要从头训练一个模型时，模型参数的配置文件
 - train_path：经过预处理之后的数据存放路径
 - max_len：训练时，输入数据的最大长度。
 - log_path：训练日志存放位置
 - ignore_index：对于该token_id，不计算loss，默认为-100
 - epochs：训练的最大轮次
-- batch_size：训练的batch size
-- gpu0_bsz：pytorch使用多GPU并行训练时，存在负载不均衡的问题，即0号卡满载了，其他卡还存在很多空间，抛出OOM异常。该参数可以设置分配到0号卡上的数据数量。 
+- batch_size：训练的batch size 
 - lr：学习率
 - eps：AdamW优化器的衰减率
 - log_step：多少步汇报一次loss
@@ -120,7 +119,7 @@ python train.py --epochs 100 --batch_size 16 --device 0,1 --gpu0_bsz 5 --train_p
 ### 文本生成
 运行如下命令，进行文本生成。
 ```
-python generate.py --device 0 --max_len 200 --title 家乡的四季 --context 家乡的四季,最美不过了
+python generate.py --title 家乡的四季 --context 家乡的四季,最美不过了
 ```
 超参数说明：
 - device：使用哪个GPU进行生成 
@@ -135,46 +134,11 @@ python generate.py --device 0 --max_len 200 --title 家乡的四季 --context �
 - context：作文上文
 - context_len：每一步生成时，参考的上文的长度
 
-### Http服务
-将模型生成能力封装成Http服务，支持Post与Get请求。运行如下命令，启动服务。
-```
-python http_service.py --port 8085 --model_path model/zuowen_epoch40 --context_len 200 
-```
-Get请求：
-```
-http://localhost:8085/zuowen?title="家乡的四季"&context="家乡的四季,最美不过了"&max_len=200
-```
-Post请求
-```
-localhost:8085/zuowen
-{
-    'title':'家乡的四季',
-    'context':'家乡的四季,最美不过了',
-    'max_len':200
-}
-```
-
-超参数说明：
-- device：使用哪个GPU进行生成 
-- temperature:详情可参考temperature sampling的思想
-- topk:top-k采样（注：topp为0，topk不为0时采用top-k采样）
-- topp:核采样（注：topk为0，topp不为0时，采用核采样）
-- port：服务绑定的端口号
-- log_path：生成日志存放位置
-- no_cuda：设为True时，不使用GPU
-- model_path：模型存放路径
-- context_len：每一步生成时，参考的上文的长度
-
-
 <h2 id="model_share">模型分享</h2>
 
 |模型 | 共享地址 |模型描述|
 |---------|--------|--------|
 |zuowen_epoch40 | [百度网盘【提取码:8o3v】](https://pan.baidu.com/s/1nwyqQ6WyE0mE0U6OVlThEQ) |使用26w篇中文作文语料训练了40个epoch，loss降到2.1左右，单词预测准确率大约为54%|
-
-## Future Work
-- 使用3张1080Ti进行训练，由于显卡资源有限，在数据预处理时，使用了大小为200的滑动窗口对数据进行截断，batch_size设为50。没有充分使用模型1024的最大输入长度，导致训练不够充分。若有充足的显卡资源，可以使用1024的滑动窗口对数据进行截断，提高模型的生成效果。
-- 当前代码主要针对作文数据集进行数据预处理、训练、生成。后续将会更新代码,以便用于处理各种数据集。
 
 <h2 id="sample">生成样例</h2>
 以下生成样例，生成长度默认为200。
