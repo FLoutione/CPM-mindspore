@@ -1,5 +1,4 @@
 import argparse
-# import math
 import time
 import mindspore
 from loguru import logger
@@ -7,11 +6,9 @@ from datetime import datetime
 import os
 from os.path import join, exists
 import pickle
-# import sys
 from utils_CPM import set_random_seed
 from mindspore import ops, nn, ms_function
 from mindspore.dataset import GeneratorDataset
-# from mindspore.train.serialization import save_checkpoint
 from mindnlp.models import GPT2LMHeadModel, GPT2Config
 from mindnlp.modules import Accumulator
 from dataset import CPMDataset
@@ -35,7 +32,6 @@ def set_args():
     parser.add_argument('--ignore_index', default=-100, type=int, required=False, help='对于ignore_index的label token不计算梯度')
     parser.add_argument('--epochs', default=40, type=int, required=False, help='训练的最大轮次')
     parser.add_argument('--batch_size', default=14, type=int, required=False, help='训练的batch size')
-    parser.add_argument('--gpu0_bsz', default=6, type=int, required=False, help='0号卡的batch size')
     parser.add_argument('--lr', default=1e-5, type=float, required=False, help='学习率')
     parser.add_argument('--eps', default=1.0e-09, type=float, required=False, help='AdamW优化器的衰减率')
     parser.add_argument('--log_step', default=1, type=int, required=False, help='多少步汇报一次loss')
@@ -88,7 +84,7 @@ def train_epoch(train_dataloader, logger,
             logits = outputs[1]
             
             # 统计该batch的预测token的正确数与总数
-            batch_correct_num, batch_total_num = calculate_acc(logits, labels)
+            batch_correct_num, batch_total_num = calculate_acc(logits, labels, ignore_index=args.ignore_index)
             # 统计该epoch的预测token的正确数与总数
             epoch_correct_num += batch_correct_num
             epoch_total_num += batch_total_num
@@ -202,12 +198,10 @@ def main():
     # 创建日志对象
     cur_time = time.strftime("%Y%m%d%H%M%S", time.localtime())
     logger.add(join(args.output_path, 'train-{}.log'.format(cur_time)))
-    # 初始化tensorboard
-    # writer = SummaryWriter(args.output_path)
     logger.info('using device:{}'.format(args.device))
 
     # 设置随机种子
-    set_random_seed(args.seed, args.cuda)
+    set_random_seed(args.seed)
 
     # 加载训练集和验证集
     # ========= Loading Dataset ========= #
@@ -231,7 +225,7 @@ def main():
     if not os.path.exists(args.output_path):
         os.mkdir(args.output_path)
 
-    # logger.info('model config:\n{}'.format(model.config.to_json_string()))
+    logger.info('model config:\n{}'.format(model.config.to_json_string()))
         
     # 计算模型参数数量
     num_parameters = 0
