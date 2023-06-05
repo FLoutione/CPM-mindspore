@@ -72,7 +72,6 @@ def load_dataset(logger, args):
 
 def train_epoch(train_dataloader, logger,
                 epoch, args, model, train_step):
-    ignore_index = args.ignore_index
     epoch_start_time = datetime.now()
     
     total_loss = 0  # 记录下整个epoch的loss的总和
@@ -85,7 +84,7 @@ def train_epoch(train_dataloader, logger,
         # 捕获cuda out of memory exception
         try:
             labels=labels.astype(mindspore.int32)
-            outputs = model(input_ids, labels=labels, ignore_index=ignore_index)
+            outputs = model(input_ids, labels=labels)
             logits = outputs[1]
             
             # 统计该batch的预测token的正确数与总数
@@ -147,13 +146,6 @@ def train(logger, train_dataloader, args, model):
     def forward_fn(data, label):
         logits = model(data, labels=label)
         loss = logits[0]
-        # 梯度累加清零已在模型中处理loss
-        # logit = logits[1]
-        # # logit = logit.swapaxes(1,2)
-        # logit = logit[..., :-1, :].view(-1, logit.shape[-1])
-        # label = label[..., 1:].view(-1)
-        # loss = loss_fn(logit, label)
-        # loss除以累加步数accumulate_step
         return loss / accumulate_step
 
     # Get gradient function
@@ -206,12 +198,6 @@ def main():
     args = set_args()
     
     args.cuda = not args.no_cuda
-
-    # if args.batch_size < 2048 and args.warmup_steps <= 4000:
-    #     print('[Warning] The warmup steps may be not enough.\n' \
-    #           '(sz_b, warmup) = (2048, 4000) is the official setting.\n' \
-    #           'Using smaller batch w/o longer warmup may cause ' \
-    #           'the warmup stage ends with only little data trained.')
 
     # 创建日志对象
     cur_time = time.strftime("%Y%m%d%H%M%S", time.localtime())
