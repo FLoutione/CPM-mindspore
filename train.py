@@ -43,7 +43,6 @@ def set_args():
     parser.add_argument('--ignore_index', default=-100, type=int, required=False, help='对于ignore_index的label token不计算梯度')
     parser.add_argument('--epochs', default=40, type=int, required=False, help='训练的最大轮次')
     parser.add_argument('--batch_size', default=12, type=int, required=False, help='训练的batch size')
-    parser.add_argument('--gpu0_bsz', default=6, type=int, required=False, help='0号卡的batch size')
     parser.add_argument('--lr', default=1e-5, type=float, required=False, help='学习率')
     parser.add_argument('--eps', default=1.0e-09, type=float, required=False, help='AdamW优化器的衰减率')
     parser.add_argument('--log_step', default=1, type=int, required=False, help='多少步汇报一次loss')
@@ -136,7 +135,6 @@ def train_epoch(train_dataloader, logger,
     model_to_save = model.module if hasattr(model, 'module') else model
     PreTrainedModel.save(model, model_path)
     model_path = f"{model_path}/mindspore_model.ckpt"
-    # save_checkpoint(model_to_save, model_path)
     logger.info('epoch {} finished'.format(epoch + 1))
     epoch_finish_time = datetime.now()
     logger.info('time for one epoch: {}'.format(epoch_finish_time - epoch_start_time))
@@ -160,13 +158,6 @@ def train(logger, train_dataloader, args, model):
     def forward_fn(data, label):
         logits = model(data, labels=label)
         loss = logits[0]
-        # 梯度累加清零已在模型中处理loss
-        # logit = logits[1]
-        # # logit = logit.swapaxes(1,2)
-        # logit = logit[..., :-1, :].view(-1, logit.shape[-1])
-        # label = label[..., 1:].view(-1)
-        # loss = loss_fn(logit, label)
-        # loss除以累加步数accumulate_step
         return loss / accumulate_step
 
     # Get gradient function
@@ -227,17 +218,9 @@ def main():
     
     args.cuda = not args.no_cuda
 
-    # if args.batch_size < 2048 and args.warmup_steps <= 4000:
-    #     print('[Warning] The warmup steps may be not enough.\n' \
-    #           '(sz_b, warmup) = (2048, 4000) is the official setting.\n' \
-    #           'Using smaller batch w/o longer warmup may cause ' \
-    #           'the warmup stage ends with only little data trained.')
-
     # 创建日志对象
     cur_time = time.strftime("%Y%m%d%H%M%S", time.localtime())
     logger.add(join(args.output_path, 'train-{}.log'.format(cur_time)))
-    # 初始化tensorboard
-    # writer = SummaryWriter(args.output_path)
     logger.info('using device:{}'.format(args.device))
 
     # 设置随机种子
@@ -275,7 +258,7 @@ def main():
     if not os.path.exists(args.output_path):
         os.mkdir(args.output_path)
 
-    # logger.info('model config:\n{}'.format(model.config.to_json_string()))
+    logger.info('model config:\n{}'.format(model.config.to_json_string()))
         
     # 计算模型参数数量
     num_parameters = 0
