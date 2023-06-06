@@ -26,13 +26,13 @@ python==3.7.14、mindspore==2.0.0.20230531、sentencepiece==0.1.94、Flask==1.1.
   - vocab.json：分词与id的键值对
   - tokenizer.json：CPM_Generate提供的文件，用于tokenizer的加载
 - generate.py：生成代码
-- train.py：多卡训练代码（采用数据并行），基于mindspore的GPU并行所写，详情可以参考MindSpore官网（https://www.mindspore.cn/tutorials/experts/zh-CN/r2.0/parallel/train_gpu.html）
+- train.py：多卡训练代码（采用数据并行），基于mindspore的GPU并行所写，详情可以参考MindSpore官网（https://www.mindspore.cn/tutorials/experts/zh-CN/r2.0/parallel/train_gpu.html ）
 - train_single_card.py：单卡训练代码
 - preprocess.py：数据预处理代码
 - utils.py：存放一些工具代码
 
 ## 模型参数与训练细节
-由于GPU资源有限，本项目使用cpm-medium.json中的模型参数，若资源充足，可尝试申请更大的参数配置。
+由于GPU资源有限，本项目使用cpm-medium.json中的模型参数，若资源充足，可尝试申请更大的参数配置，可以在huggingface上的CPM-Generate里面寻找。
 
 本项目的部分模型参数如下：
 - n_ctx: 1024
@@ -46,7 +46,7 @@ python==3.7.14、mindspore==2.0.0.20230531、sentencepiece==0.1.94、Flask==1.1.
 
 ## 使用方法
 ### Quick Start
-在[模型分享](#model_share)中下载模型，将模型文件夹zuowen_epoch40放到model目录下,执行如下命令，指定作文标题、作文开头和长度，进行生成。
+在[模型分享](#model_share)中下载模型，将模型文件夹zuowen_epoch40放到model目录下（需要手动修改一下生成模型路径）,执行如下命令，指定作文标题、作文开头和长度，进行生成。
 ```
 python generate.py --model_path model/zuowen_epoch40 --title 家乡的四季 --context 家乡的四季,最美不过了 --max_len 200
 ```
@@ -78,7 +78,7 @@ python generate.py --model_path model/zuowen_epoch40 --title 家乡的四季 --c
 对于每个txt文件，首先取出标题与内容，将标题与内容按照"title[sep]content[eod]"的方式拼接起来，然后对其进行tokenize，最后使用滑动窗口对内容进行截断，得到训练数据。
 运行如下命令，进行数据预处理。注：预处理之后的数据保存为train.pkl，这是一个list，list中每个元素表示一条训练数据。
 ```
-python preprocess.py --data_path data/zuowen --save_path data/train.pkl --win_size 200 --step 200
+python preprocess.py --data_path data/zuowen --save_path data/train.pkl --win_size 256 --step 256
 ```
 超参数说明：
 - vocab_file：sentencepiece模型路径，用于tokenize
@@ -138,7 +138,7 @@ python generate.py --title 家乡的四季 --context 家乡的四季,最美不�
 
 |模型 | 共享地址 |模型描述|
 |---------|--------|--------|
-|zuowen_epoch40 | [huggingface上的数据库](https://huggingface.co/datasets/ChenJianHao/CPM_Generate/tree/main) |使用26w篇中文作文语料训练了40个epoch，loss降到2.0左右，单词预测准确率大约为54%|
+|zuowen_epoch40 | [huggingface公开数据集](https://huggingface.co/datasets/ChenJianHao/CPM_Generate/tree/main) |使用26w篇中文作文语料训练了40个epoch，loss降到2.0左右，单词预测准确率大约为54%|
 
 <h2 id="sample">生成样例</h2>
 以下生成样例，生成长度默认为200。
