@@ -21,7 +21,7 @@ def generate_next_token(input_ids):
     # 对于<unk>的概率设为无穷小，也就是说模型的预测结果不可能是[UNK]这个token
     next_token_logits[unk_id] = -float('Inf')
     filtered_logits = top_k_top_p_filtering(next_token_logits, top_k=args.topk, top_p=args.topp)
-    # torch.multinomial表示从候选集合中选出无放回地进行抽取num_samples个元素，权重越高，抽到的几率越高，返回元素的下标
+    # mindspore.Tensor.multinomial表示从候选集合中选出无放回地进行抽取num_samples个元素，权重越高，抽到的几率越高，返回元素的下标
     # next_token_id = Tensor.multinomial(ops.softmax(filtered_logits, axis=-1), num_samples=1, replacement=False)
     probs = np.exp(filtered_logits) / np.sum(np.exp(filtered_logits), axis=-1)
     next_token_id = np.random.choice(len(filtered_logits), size=1, p=probs, replace=False)
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_len', default=350, type=int, required=False, help='生成的最长长度')
     parser.add_argument('--log_path', default='CPM-mindspore/log/generate.log', type=str, required=False, help='日志存放位置')
     parser.add_argument('--no_cuda', action='store_true', help='不使用GPU进行预测')
-    parser.add_argument('--model_path', type=str, default='/home/daiyuxin/cjh1/CPM-mindspore/output/train/epoch9', help='模型存放位置')
+    parser.add_argument('--model_path', type=str, default='CPM-mindspore/output/train/epoch40', help='模型存放位置')
     # parser.add_argument('--title', type=str, default='徜徉在书籍的阳光世界', help='作文标题')
     # parser.add_argument('--context', type=str, default='一本书是一个人的眼睛，它可以让你看到另一个世界的奇妙', help='作文上文')
     parser.add_argument('--title', type=str, default='家乡的四季', help='作文标题')
