@@ -42,13 +42,13 @@ python==3.7.14、mindspore==2.0.0.20230531、sentencepiece==0.1.94、Flask==1.1.
 - n_positions: 1024
 - vocab_size: 30000
 
-对26w篇作文进行预处理之后，得到60w+长度为200的训练数据。显卡为一张3090，batch_size=12，一张卡显存满载,一轮训练大约需要12个小时。训练40轮之后，loss降到2.0左右，单词预测准确率大约为54%。
+对26w篇作文进行预处理之后，得到70w+长度为256的训练数据。显卡为一张3090，batch_size=14，一张卡显存满载,一轮训练大约需要12个小时。训练40轮之后，loss降到2.0左右，单词预测准确率大约为54%。
 
 ## 使用方法
 ### Quick Start
 在[模型分享](#model_share)中下载模型，将模型文件夹zuowen_epoch40放到model目录下（需要手动修改一下生成模型路径）,执行如下命令，指定作文标题、作文开头和长度，进行生成。
 ```
-python generate.py --model_path model/zuowen_epoch40 --title 家乡的四季 --context 家乡的四季,最美不过了 --max_len 200
+python generate.py --model_path model/zuowen_epoch40 --title 家乡的四季 --context 家乡的四季,最美不过了 --max_len 256
 ```
 
 ### 数据预处理
