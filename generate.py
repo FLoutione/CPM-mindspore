@@ -49,7 +49,7 @@ def generate(max_len):
         if cur_len >= max_len and last_token_id == 8 and next_token_id == 3:
             break
         # 超过最大长度，并且生成标点符号
-        if cur_len >= max_len and word in [".", "。", "！", "!", "?", "？", ",", "，"]:
+        if cur_len >= max_len and word in [".", "。", "！", "!", "?", "？"]:
             break
         # 生成结束符
         if next_token_id == eod_id:
@@ -57,7 +57,7 @@ def generate(max_len):
     input_ids = input_ids.squeeze(0)
     input_ids = input_ids[len(title_ids) + 1:]
     result = tokenizer.decode(input_ids)
-    return result
+    return result.replace(" ", "").replace("▁", "")
 
 if __name__ == '__main__':
     
@@ -80,7 +80,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device  # 此处设置程序使用哪些显卡
-    # args.cuda = torch.cuda.is_available() and not args.no_cuda  # 当用户使用GPU,并且GPU可用时
 
     # 创建日志对象
     logger = set_logger(args.log_path)
