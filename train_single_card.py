@@ -217,6 +217,14 @@ def main():
      # 创建模型
     if args.pretrained_model:  # 加载预训练模型
         model = GPT2LMHeadModel.from_pretrained(args.pretrained_model)
+        config_path = f"{args.pretrained_model}/config.json"
+        with open(config_path, encoding='utf-8') as config:
+            config = json.load(config)
+        config = GPT2Config(**config)
+        model = GPT2LMHeadModel(config=config, ignore_index=args.ignore_index)
+        ms_dict = mindspore.load_checkpoint(f"{args.pretrained_model}/mindspore.ckpt")
+        param_not_load = mindspore.load_param_into_net(model, ms_dict)
+        print(f"Param_not_load:{param_not_load}")
     else:  # 初始化模型
         model_config = GPT2Config.from_json_file(args.model_config)
         model = GPT2LMHeadModel(config=model_config, ignore_index=args.ignore_index)
