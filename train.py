@@ -1,5 +1,4 @@
 import argparse
-# import math
 import time
 import mindspore
 from loguru import logger
@@ -7,16 +6,12 @@ from datetime import datetime
 import os
 from os.path import join, exists
 import pickle
-# import sys
 from utils_CPM import set_logger, set_random_seed
-# from sklearn.model_selection import train_test_split
 from mindspore import ops, Tensor, Parameter, nn
 from mindspore.train.serialization import save_checkpoint
 from mindspore.dataset import GeneratorDataset
 from mindnlp.models import GPT2LMHeadModel, GPT2Config
 from mindnlp.modules import Accumulator
-# import pandas as pd
-# import numpy as np
 from dataset import CPMDataset
 from mindspore.communication import init, get_rank, get_group_size
 from mindspore.parallel._utils import _get_device_num, _get_gradients_mean
@@ -25,9 +20,6 @@ from mindnlp.abc.models import PreTrainedModel
 from mindnlp._legacy.amp import DynamicLossScaler, all_finite
 
 # nohup mpirun -n 4 python CPM-mindspore/train.py > CPM-mindspore/log_four_cards.log &
-
-# 设置使用哪些显卡进行训练
-os.environ["CUDA_VISIBLE_DEVICES"] = '4,5,6,7'
 
 def set_args():
     parser = argparse.ArgumentParser()
@@ -78,7 +70,8 @@ def load_dataset(logger, args):
 
 def train_epoch(train_dataloader, logger,
                 epoch, args, model, accumulate_step,
-                accumulator, grad_reducer, optimizer, train_step):
+                accumulator, grad_reducer, optimizer,
+                train_step, rank_id):
     ignore_index = args.ignore_index
     epoch_start_time = datetime.now()
 
@@ -129,12 +122,10 @@ def train_epoch(train_dataloader, logger,
     
      # save model
     logger.info('saving model for epoch {}'.format(epoch + 1))
-    model_path = join(args.output_path, 'epoch{}'.format(epoch + 1))
+    model_path = join(args.output_path, 'epoch{}'.format(epoch + 1), 'card_id_{}'.format(rank_id))
     if not os.path.exists(model_path):
         os.mkdir(model_path)
-    model_to_save = model.module if hasattr(model, 'module') else model
     PreTrainedModel.save(model, model_path)
-    model_path = f"{model_path}/mindspore_model.ckpt"
     logger.info('epoch {} finished'.format(epoch + 1))
     epoch_finish_time = datetime.now()
     logger.info('time for one epoch: {}'.format(epoch_finish_time - epoch_start_time))
@@ -142,7 +133,7 @@ def train_epoch(train_dataloader, logger,
     return epoch_mean_loss
 
 
-def train(logger, train_dataloader, args, model):
+def train(logger, train_dataloader, args, model, rank_id):
 
     accumulate_step = args.gradient_accumulation_steps
     optimizer = nn.AdamWeightDecay(model.trainable_params(), learning_rate=args.lr, eps=args.eps, weight_decay=1e-2)
@@ -191,7 +182,7 @@ def train(logger, train_dataloader, args, model):
             logger=logger, epoch=epoch, args=args, 
             model=model, accumulate_step=accumulate_step,
             accumulator=accumulator, grad_reducer=grad_reducer,
-            optimizer=optimizer, train_step=train_step)
+            optimizer=optimizer, train_step=train_step, rank_id=rank_id)
         train_losses.append(round(train_loss, 4))
         logger.info("train loss list:{}".format(train_losses))
 
@@ -216,21 +207,23 @@ def main():
     
     args = set_args()
     
+    # 设置使用哪些显卡进行训练
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.device
+   
     args.cuda = not args.no_cuda
 
     # 创建日志对象
     cur_time = time.strftime("%Y%m%d%H%M%S", time.localtime())
     logger.add(join(args.output_path, 'train-{}.log'.format(cur_time)))
-    logger.info('using device:{}'.format(args.device))
 
     # 设置随机种子
-    set_random_seed(args.seed, args.cuda)
+    set_random_seed(args.seed)
     
     mindspore.set_context(mode=mindspore.GRAPH_MODE, device_target="GPU")
     init("nccl")
     rank_id = get_rank()
     rank_size = get_group_size()
-    # mindspore.set_context(enable_graph_kernel=True)
+    logger.info('using device:{}'.format(rank_id))
 
     mindspore.set_auto_parallel_context(parallel_mode=mindspore.ParallelMode.DATA_PARALLEL,
                                         device_num = rank_size,
@@ -270,7 +263,7 @@ def main():
     # 记录参数设置
     logger.info("args:{}".format(args))
     
-    train(logger, train_dataloader, args, model)
+    train(logger, train_dataloader, args, model, rank_id)
 
 
 if __name__ == '__main__':
