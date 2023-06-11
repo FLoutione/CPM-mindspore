@@ -19,6 +19,7 @@ from mindspore.ops import clip_by_global_norm
 from mindnlp.abc.models import PreTrainedModel
 from mindnlp._legacy.amp import DynamicLossScaler, all_finite
 
+# bash CPM-mindspore/run_train.sh
 # nohup mpirun -n 4 python CPM-mindspore/train.py > CPM-mindspore/log_four_cards.log &
 
 def set_args():
@@ -31,7 +32,6 @@ def set_args():
                         help='需要从头训练一个模型时，模型参数的配置文件')
     parser.add_argument('--train_path', default='CPM-mindspore/data/train.pkl', type=str, required=False, help='经过预处理之后的数据存放路径')
     parser.add_argument('--max_len', default=256, type=int, required=False, help='训练时，输入数据的最大长度')
-
     parser.add_argument('--ignore_index', default=-100, type=int, required=False, help='对于ignore_index的label token不计算梯度')
     parser.add_argument('--epochs', default=40, type=int, required=False, help='训练的最大轮次')
     parser.add_argument('--batch_size', default=12, type=int, required=False, help='训练的batch size')
@@ -124,7 +124,7 @@ def train_epoch(train_dataloader, logger,
     logger.info('saving model for epoch {}'.format(epoch + 1))
     model_path = join(args.output_path, 'epoch{}'.format(epoch + 1), 'card_id_{}'.format(rank_id))
     if not os.path.exists(model_path):
-        os.mkdir(model_path)
+        os.makedirs(model_path, exist_ok=True)
     PreTrainedModel.save(model, model_path)
     logger.info('epoch {} finished'.format(epoch + 1))
     epoch_finish_time = datetime.now()
