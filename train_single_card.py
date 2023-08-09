@@ -216,7 +216,6 @@ def main():
     
      # 创建模型
     if args.pretrained_model:  # 加载预训练模型
-        model = GPT2LMHeadModel.from_pretrained(args.pretrained_model)
         config_path = f"{args.pretrained_model}/config.json"
         with open(config_path, encoding='utf-8') as config:
             config = json.load(config)
